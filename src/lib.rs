@@ -17,12 +17,16 @@ use ferrum_hdl::{
     bitpack::BitPack,
     cast::Cast,
     domain::Clock,
+    index::Idx,
     signal::{reg_en, Reset, Signal},
     unsigned::{u, Unsigned},
 };
 use signal_ext::rise_rate;
 use system::System;
 
+// pub fn top_module() -> Idx<4> {
+//     Idx::new()
+// }
 pub fn top_module(
     clk: Clock<System>,
     rst: Reset<System>,

@@ -6,7 +6,7 @@ use ferrum_hdl::{
     bitvec::BitVec,
     cast::{Cast, CastFrom},
     const_functions::clog2,
-    const_helpers::{Assert, IsTrue, UsizeConstr},
+    const_helpers::{Assert, IsTrue},
     signal::SignalValue,
     unsigned::Unsigned,
 };
@@ -47,7 +47,7 @@ where
     }
 }
 
-impl<const N: usize> SignalValue for Counter<N> where UsizeConstr<{ counter(N) }>: Sized {}
+impl<const N: usize> SignalValue for Counter<N> where [(); counter(N)]: {}
 
 impl<const N: usize> Counter<N>
 where
