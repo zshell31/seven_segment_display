@@ -1,17 +1,20 @@
 use std::marker::PhantomData;
 
 use derive_where::derive_where;
-use ferrum_hdl::{bit::Bit, bitpack::BitPack, signal::SignalValue};
+use ferrum_hdl::{
+    cast::{Cast, CastFrom},
+    signal::SignalValue,
+};
 
 pub trait Polarity {
-    fn bit(bit: Bit) -> Bit;
+    fn bit(bit: bool) -> bool;
 }
 
 pub struct High;
 
 impl Polarity for High {
     #[inline]
-    fn bit(bit: Bit) -> Bit {
+    fn bit(bit: bool) -> bool {
         bit
     }
 }
@@ -20,23 +23,23 @@ pub struct Low;
 
 impl Polarity for Low {
     #[inline]
-    fn bit(bit: Bit) -> Bit {
+    fn bit(bit: bool) -> bool {
         !bit
     }
 }
 
 #[derive_where(Debug, Clone, Copy)]
-#[derive(SignalValue, BitPack)]
+#[derive(SignalValue)]
 #[signal_value(bound = "P: Polarity + 'static")]
-#[bitpack(bound = "P: Polarity")]
+// #[bitpack(bound = "P: Polarity")]
 pub struct Active<P: Polarity> {
-    bit: Bit,
+    bit: bool,
     _polarity: PhantomData<P>,
 }
 
 impl<P: Polarity> Active<P> {
     #[inline]
-    pub fn new(bit: Bit) -> Self {
+    pub fn new(bit: bool) -> Self {
         Self {
             bit: P::bit(bit),
             _polarity: PhantomData,
@@ -44,35 +47,21 @@ impl<P: Polarity> Active<P> {
     }
 
     #[inline]
-    pub fn bit(&self) -> Bit {
+    pub fn bit(&self) -> bool {
         P::bit(self.bit)
     }
 }
 
-impl<P: Polarity> From<Bit> for Active<P> {
+impl<P: Polarity> CastFrom<bool> for Active<P> {
     #[inline]
-    fn from(bit: Bit) -> Self {
-        Self::new(bit)
+    fn cast_from(bit: bool) -> Self {
+        Self::new(bit.cast())
     }
 }
 
-impl<P: Polarity> From<Active<P>> for Bit {
+impl<P: Polarity> CastFrom<Active<P>> for bool {
     #[inline]
-    fn from(active: Active<P>) -> Self {
-        active.bit()
-    }
-}
-
-impl<P: Polarity> From<bool> for Active<P> {
-    #[inline]
-    fn from(bit: bool) -> Self {
-        Self::new(bit.into())
-    }
-}
-
-impl<P: Polarity> From<Active<P>> for bool {
-    #[inline]
-    fn from(active: Active<P>) -> Self {
-        active.bit().into()
+    fn cast_from(active: Active<P>) -> Self {
+        active.bit().cast()
     }
 }

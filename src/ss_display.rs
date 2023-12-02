@@ -1,6 +1,11 @@
 use std::fmt::{self, Display};
 
-use ferrum_hdl::{bitpack::BitPack, cast::Cast, signal::SignalValue, unsigned::Unsigned};
+use ferrum_hdl::{
+    bitpack::BitPack,
+    cast::{Cast, CastFrom},
+    signal::SignalValue,
+    unsigned::Unsigned,
+};
 
 #[derive(Debug, Clone, SignalValue, BitPack)]
 pub struct SSDisplay {
@@ -47,11 +52,11 @@ impl Display for SSDisplay {
 
 impl SSDisplay {
     pub fn five() -> SSDisplay {
-        Self::encode(5_u8.into())
+        Self::encode(5_u8.cast())
     }
 
     pub fn encode(n: Unsigned<4>) -> Self {
-        (match u8::from(n) {
+        (match u8::cast_from(n) {
             0x0 => 0b1111110_u8,
             0x1 => 0b0110000,
             0x2 => 0b1101101,

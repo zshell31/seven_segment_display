@@ -2,44 +2,211 @@
 
 module top_module
 (
+    // Inputs
+    input wire clk,
+    input wire rst,
+    input wire btn$0,
+    input wire btn$1,
+    input wire btn$2,
+    input wire btn$3,
+    input wire btn$4,
+    input wire btn$5,
+    input wire btn$6,
+    input wire btn$7,
     // Outputs
-    output wire anodes,
-    output wire anodes_1,
-    output wire anodes_2,
-    output wire anodes_3,
-    output wire seg,
-    output wire seg_1,
-    output wire seg_2,
-    output wire seg_3,
-    output wire seg_4,
-    output wire seg_5,
-    output wire seg_6,
+    output wire anodes$0,
+    output wire anodes$1,
+    output wire anodes$2,
+    output wire anodes$3,
+    output wire seg$0,
+    output wire seg$1,
+    output wire seg$2,
+    output wire seg$3,
+    output wire seg$4,
+    output wire seg$5,
+    output wire seg$6,
     output wire dp
 );
 
-    assign anodes = 0;
+    assign seg$0 = 0;
 
-    assign anodes_1 = 0;
+    assign seg$1 = 0;
 
-    assign anodes_2 = 0;
+    assign seg$2 = 0;
 
-    assign anodes_3 = 1;
+    assign seg$3 = 0;
 
-    assign seg = 1;
+    assign seg$4 = 0;
 
-    assign seg_1 = 0;
+    assign seg$5 = 0;
 
-    assign seg_2 = 1;
-
-    assign seg_3 = 1;
-
-    assign seg_4 = 0;
-
-    assign seg_5 = 1;
-
-    assign seg_6 = 1;
+    assign seg$6 = 0;
 
     assign dp = 1;
+
+    reg [17:0] dff;
+    initial begin
+        dff = 18'd0;
+    end
+    wire [16:0] value;
+    wire succ;
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            dff <= 18'd0;
+        else
+            dff <= { value, succ };
+    end
+
+    Counter$succ __Counter$succ (
+        // Inputs
+        .self$(dff[1 +: 17]),
+        // Outputs
+        .value(value),
+        .succ(succ)
+    );
+
+    wire [7:0] speed;
+    assign speed = {
+        btn$0,
+        btn$1,
+        btn$2,
+        btn$3,
+        btn$4,
+        btn$5,
+        btn$6,
+        btn$7
+    };
+
+    reg [7:0] cnt;
+    initial begin
+        cnt = 8'd0;
+    end
+    wire [7:0] mux;
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            cnt <= 8'd0;
+        else if (dff[0])
+            cnt <= mux;
+    end
+
+    always @(*) begin
+        case (cnt >= speed)
+            1'h1: 
+                mux = 8'd0;
+            default: 
+                mux = cnt + 8'd1;
+        endcase
+    end
+
+    reg [2:0] cnt_1;
+    initial begin
+        cnt_1 = 3'd0;
+    end
+    wire [2:0] cnt_2;
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            cnt_1 <= 3'd0;
+        else if (dff[0] && ( cnt == 8'd0 ))
+            cnt_1 <= cnt_2;
+    end
+
+    Counter$succ_1 __Counter$succ_1 (
+        // Inputs
+        .self$(cnt_1),
+        // Outputs
+        .value(cnt_2),
+        .succ(succ_1)
+    );
+
+    Counter$one_hot __Counter$one_hot (
+        // Inputs
+        .self$(cnt_1),
+        // Outputs
+        .out(anodes$0),
+        .out_1(anodes$1),
+        .out_2(anodes$2),
+        .out_3(anodes$3)
+    );
+
+endmodule
+
+module Counter$succ
+(
+    // Inputs
+    input wire [16:0] self$,
+    // Outputs
+    output wire [16:0] value,
+    output wire succ
+);
+
+    wire [17:0] mux;
+    always @(*) begin
+        case (self$ == 17'd97655)
+            1'h1: 
+                mux = 18'd1;
+            default: 
+                mux = { self$ + 17'd1, 1'd0 };
+        endcase
+    end
+
+    assign value = mux[1 +: 17];
+
+    assign succ = mux[0];
+
+endmodule
+
+module Counter$succ_1
+(
+    // Inputs
+    input wire [2:0] self$,
+    // Outputs
+    output wire [2:0] value,
+    output wire succ
+);
+
+    wire [3:0] mux;
+    always @(*) begin
+        case (self$ == 3'd3)
+            1'h1: 
+                mux = 4'd1;
+            default: 
+                mux = { self$ + 3'd1, 1'd0 };
+        endcase
+    end
+
+    assign value = mux[1 +: 3];
+
+    assign succ = mux[0];
+
+endmodule
+
+module Counter$one_hot
+(
+    // Inputs
+    input wire [2:0] self$,
+    // Outputs
+    output wire out,
+    output wire out_1,
+    output wire out_2,
+    output wire out_3
+);
+
+    wire [7:0] __tmp_1;
+    assign __tmp_1 = { 0, self$ };
+
+    wire [7:0] __tmp_2;
+    assign __tmp_2 = 8'd8 >> __tmp_1;
+
+    wire [3:0] __tmp_3;
+    assign __tmp_3 = __tmp_2[0 +: 4];
+
+    assign out = __tmp_3[3];
+
+    assign out_1 = __tmp_3[2];
+
+    assign out_2 = __tmp_3[1];
+
+    assign out_3 = __tmp_3[0];
 
 endmodule
 
