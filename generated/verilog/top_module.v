@@ -28,41 +28,39 @@ module top_module
     output wire dp
 );
 
-    assign seg$0 = 0;
+    assign seg$0 = 1;
 
-    assign seg$1 = 0;
+    assign seg$1 = 1;
 
-    assign seg$2 = 0;
+    assign seg$2 = 1;
 
-    assign seg$3 = 0;
+    assign seg$3 = 1;
 
-    assign seg$4 = 0;
+    assign seg$4 = 1;
 
-    assign seg$5 = 0;
+    assign seg$5 = 1;
 
-    assign seg$6 = 0;
+    assign seg$6 = 1;
 
-    assign dp = 1;
+    assign dp = 0;
 
-    reg [17:0] dff;
+    reg [3:0] dff;
     initial begin
-        dff = 18'd0;
+        dff = 4'd0;
     end
-    wire [16:0] value;
-    wire succ;
+    wire [2:0] mux;
     always @(posedge clk or posedge rst) begin
         if (rst)
-            dff <= 18'd0;
+            dff <= 4'd0;
         else
-            dff <= { value, succ };
+            dff <= { mux, dff[1 +: 3] == 3'd3 };
     end
 
-    Counter$succ __Counter$succ (
+    Idx$succ __Idx$succ (
         // Inputs
-        .self$(dff[1 +: 17]),
+        .self$(dff[1 +: 3]),
         // Outputs
-        .value(value),
-        .succ(succ)
+        .mux(mux)
     );
 
     wire [7:0] speed;
@@ -81,20 +79,20 @@ module top_module
     initial begin
         cnt = 8'd0;
     end
-    wire [7:0] mux;
+    wire [7:0] mux_1;
     always @(posedge clk or posedge rst) begin
         if (rst)
             cnt <= 8'd0;
         else if (dff[0])
-            cnt <= mux;
+            cnt <= mux_1;
     end
 
     always @(*) begin
         case (cnt >= speed)
-            1'h1: 
-                mux = 8'd0;
-            default: 
-                mux = cnt + 8'd1;
+            1'h1:
+                mux_1 = 8'd0;
+            default:
+                mux_1 = cnt + 8'd1;
         endcase
     end
 
@@ -102,25 +100,24 @@ module top_module
     initial begin
         cnt_1 = 3'd0;
     end
-    wire [2:0] cnt_2;
+    wire [2:0] mux_2;
     always @(posedge clk or posedge rst) begin
         if (rst)
             cnt_1 <= 3'd0;
         else if (dff[0] && ( cnt == 8'd0 ))
-            cnt_1 <= cnt_2;
+            cnt_1 <= mux_2;
     end
 
-    Counter$succ_1 __Counter$succ_1 (
+    Idx$succ_1 __Idx$succ_1 (
         // Inputs
         .self$(cnt_1),
         // Outputs
-        .value(cnt_2),
-        .succ(succ_1)
+        .mux(mux_2)
     );
 
     Counter$one_hot __Counter$one_hot (
         // Inputs
-        .self$(cnt_1),
+        .__tmp(cnt_1),
         // Outputs
         .out(anodes$0),
         .out_1(anodes$1),
@@ -130,60 +127,48 @@ module top_module
 
 endmodule
 
-module Counter$succ
-(
-    // Inputs
-    input wire [16:0] self$,
-    // Outputs
-    output wire [16:0] value,
-    output wire succ
-);
-
-    wire [17:0] mux;
-    always @(*) begin
-        case (self$ == 17'd97655)
-            1'h1: 
-                mux = 18'd1;
-            default: 
-                mux = { self$ + 17'd1, 1'd0 };
-        endcase
-    end
-
-    assign value = mux[1 +: 17];
-
-    assign succ = mux[0];
-
-endmodule
-
-module Counter$succ_1
+module Idx$succ
 (
     // Inputs
     input wire [2:0] self$,
     // Outputs
-    output wire [2:0] value,
-    output wire succ
+    output wire [2:0] mux
 );
 
-    wire [3:0] mux;
     always @(*) begin
         case (self$ == 3'd3)
-            1'h1: 
-                mux = 4'd1;
-            default: 
-                mux = { self$ + 3'd1, 1'd0 };
+            1'h1:
+                mux = 3'd0;
+            default:
+                mux = self$ + 3'd1;
         endcase
     end
 
-    assign value = mux[1 +: 3];
+endmodule
 
-    assign succ = mux[0];
+module Idx$succ_1
+(
+    // Inputs
+    input wire [2:0] self$,
+    // Outputs
+    output wire [2:0] mux
+);
+
+    always @(*) begin
+        case (self$ == 3'd3)
+            1'h1:
+                mux = 3'd0;
+            default:
+                mux = self$ + 3'd1;
+        endcase
+    end
 
 endmodule
 
 module Counter$one_hot
 (
     // Inputs
-    input wire [2:0] self$,
+    input wire [2:0] __tmp,
     // Outputs
     output wire out,
     output wire out_1,
@@ -191,22 +176,19 @@ module Counter$one_hot
     output wire out_3
 );
 
-    wire [7:0] __tmp_1;
-    assign __tmp_1 = { 0, self$ };
-
-    wire [7:0] __tmp_2;
-    assign __tmp_2 = 8'd8 >> __tmp_1;
-
     wire [3:0] __tmp_3;
-    assign __tmp_3 = __tmp_2[0 +: 4];
+    assign __tmp_3 = { 0, __tmp };
 
-    assign out = __tmp_3[3];
+    wire [3:0] val;
+    assign val = 4'd1 << ( 4'd3 - __tmp_3 );
 
-    assign out_1 = __tmp_3[2];
+    assign out = val[3];
 
-    assign out_2 = __tmp_3[1];
+    assign out_1 = val[2];
 
-    assign out_3 = __tmp_3[0];
+    assign out_2 = val[1];
+
+    assign out_3 = val[0];
 
 endmodule
 

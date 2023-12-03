@@ -4,25 +4,22 @@ use ferrum_hdl::{
     array::Array,
     bitpack::BitPack,
     bitvec::BitVec,
-    cast::{Cast, CastFrom},
-    const_functions::clog2,
-    const_helpers::{Assert, IsTrue},
-    signal::SignalValue,
+    cast::Cast,
+    const_helpers::{Assert, ConstConstr, IsTrue},
+    domain::{Clock, ClockDomain},
+    index::{idx_constr, Idx},
+    signal::{reg_en, Enable, Reset, Signal, SignalValue},
     unsigned::Unsigned,
 };
 
-pub const fn counter(n: usize) -> usize {
-    clog2(n)
-}
-
-#[derive(Clone)]
-pub struct Counter<const N: usize>(Unsigned<{ counter(N) }>)
+#[derive(Clone, SignalValue)]
+pub struct Counter<const N: usize>(Idx<N>)
 where
-    [(); counter(N)]:;
+    ConstConstr<{ idx_constr(N) }>:;
 
 impl<const N: usize> Debug for Counter<N>
 where
-    [(); counter(N)]:,
+    ConstConstr<{ idx_constr(N) }>:,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Debug::fmt(&self.0, f)
@@ -31,77 +28,42 @@ where
 
 impl<const N: usize> Binary for Counter<N>
 where
-    [(); counter(N)]:,
+    ConstConstr<{ idx_constr(N) }>:,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Binary::fmt(&self.0, f)
     }
 }
 
-impl<const N: usize> Default for Counter<N>
+impl<const N: usize> Counter<N>
 where
-    [(); counter(N)]:,
+    ConstConstr<{ idx_constr(N) }>:,
 {
-    fn default() -> Self {
-        Self::new()
+    fn new() -> Self {
+        Self(Idx::new())
     }
-}
 
-impl<const N: usize> SignalValue for Counter<N> where [(); counter(N)]: {}
+    #[inline]
+    fn succ(self) -> Self {
+        Counter(self.0.succ())
+    }
 
-impl<const N: usize> Counter<N>
-where
-    [(); counter(N)]:,
-    Assert<{ N <= 8 }>: IsTrue,
-{
-    const MAX: u8 = 1 << ((N - 1) as u8);
-}
-
-impl<const N: usize> Counter<N>
-where
-    [(); counter(N)]:,
-{
-    pub fn new() -> Self {
-        Self(0_u8.cast())
+    #[inline]
+    pub fn signal<D: ClockDomain>(
+        clk: Clock<D>,
+        rst: Reset<D>,
+        en: Enable<D>,
+    ) -> Signal<D, Self> {
+        reg_en(clk, rst, en, Self::new(), |counter| counter.succ())
     }
 
     pub fn one_hot(self) -> Array<N, bool>
     where
-        Assert<{ N <= 8 }>: IsTrue,
+        Assert<{ N <= 128 }>: IsTrue,
         Array<N, bool>: BitPack<Packed = BitVec<N>>,
     {
-        (Self::MAX >> self.0.cast::<u8>())
-            .cast::<Unsigned<N>>()
-            .repack()
-    }
-
-    #[inline]
-    pub fn is_max(&self) -> bool {
-        let max = self.0 == Unsigned::cast_from(N - 1);
-        max
-    }
-
-    #[inline]
-    pub fn is_min(&self) -> bool {
-        let min = self.0 == 0;
-        min
-    }
-
-    pub fn succ(self) -> (Self, bool) {
-        let (value, succ) = if self.is_max() {
-            (0_u8.cast(), true)
-        } else {
-            (self.0 + 1_u8, false)
-        };
-        (Self(value), succ)
-    }
-
-    pub fn pred(self) -> (Self, bool) {
-        let (value, pred) = if self.is_min() {
-            ((N as u128).cast(), true)
-        } else {
-            (self.0 - 1_u8, false)
-        };
-        (Self(value), pred)
+        let val = 1_u8.cast::<Unsigned<N>>()
+            << ((N - 1).cast::<Unsigned<N>>() - self.0.val().cast::<Unsigned<N>>());
+        val.repack()
     }
 }

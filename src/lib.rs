@@ -10,23 +10,20 @@ pub mod signal_ext;
 pub mod ss_display;
 pub mod system;
 
-use active::{Active, High, Low};
+use active::{Active, High};
 use counter::Counter;
 use ferrum_hdl::{
     array::Array,
     bitpack::BitPack,
+    bitvec::BitVec,
     cast::Cast,
     domain::Clock,
-    index::Idx,
     signal::{reg_en, Reset, Signal},
-    unsigned::{u, Unsigned},
+    unsigned::u,
 };
 use signal_ext::rise_rate;
-use system::System;
+use system::{Params, System};
 
-// pub fn top_module() -> Idx<4> {
-//     Idx::new()
-// }
 pub fn top_module(
     clk: Clock<System>,
     rst: Reset<System>,
@@ -35,11 +32,14 @@ pub fn top_module(
     Signal<System, Array<4, Active<High>>>,
     Signal<System, Array<7, Active<High>>>,
     Signal<System, Active<High>>,
-) {
+)
+where
+    [bool; 4]: BitPack<Packed = BitVec<4>>,
+{
     let seg = Signal::lift(u::MAX.repack::<Array<_, bool>>().cast());
     let dp = Signal::lift(false.cast());
 
-    let fast = rise_rate::<System, 512>(clk, rst.clone());
+    let fast = rise_rate::<System, { <System as Params>::RATE }>(clk, rst.clone());
 
     let cnt = {
         let rst = rst.clone();
@@ -58,17 +58,8 @@ pub fn top_module(
     };
     let slow = fast.clone().and(cnt.eq(0));
 
-    let anodes = reg_en(
-        clk,
-        rst.clone(),
-        slow.clone(),
-        Counter::<_>::new(),
-        |cnt: Counter<4>| {
-            let (cnt, _) = cnt.succ();
-            cnt
-        },
-    )
-    .map(|cnt| cnt.one_hot().cast());
+    let anodes = Counter::<_>::signal(clk, rst.clone(), slow.clone())
+        .map(|cnt| cnt.one_hot().cast());
 
     (anodes, seg, dp)
 }
