@@ -1,7 +1,7 @@
 use std::fmt::{Binary, Debug};
 
 use ferrum_hdl::{
-    array::Array,
+    array::{Array, ArrayExt},
     bitpack::BitPack,
     bitvec::BitVec,
     cast::Cast,
@@ -13,11 +13,11 @@ use ferrum_hdl::{
 };
 
 #[derive(Clone, SignalValue)]
-pub struct Counter<const N: usize>(Idx<N>)
+pub struct RoundRobin<const N: usize>(Idx<N>)
 where
     ConstConstr<{ idx_constr(N) }>:;
 
-impl<const N: usize> Debug for Counter<N>
+impl<const N: usize> Debug for RoundRobin<N>
 where
     ConstConstr<{ idx_constr(N) }>:,
 {
@@ -26,7 +26,7 @@ where
     }
 }
 
-impl<const N: usize> Binary for Counter<N>
+impl<const N: usize> Binary for RoundRobin<N>
 where
     ConstConstr<{ idx_constr(N) }>:,
 {
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<const N: usize> Counter<N>
+impl<const N: usize> RoundRobin<N>
 where
     ConstConstr<{ idx_constr(N) }>:,
 {
@@ -43,27 +43,38 @@ where
         Self(Idx::new())
     }
 
-    #[inline]
-    fn succ(self) -> Self {
-        Counter(self.0.succ())
+    fn next(self) -> Self {
+        RoundRobin(self.0.succ())
     }
 
-    #[inline]
     pub fn signal<D: ClockDomain>(
         clk: Clock<D>,
         rst: Reset<D>,
-        en: Enable<D>,
+        next: Enable<D>,
     ) -> Signal<D, Self> {
-        reg_en(clk, rst, en, Self::new(), |counter| counter.succ())
+        reg_en(clk, rst, next, Self::new(), |rr| rr.next())
     }
 
-    pub fn one_hot(self) -> Array<N, bool>
+    pub fn selector(&self) -> Array<N, bool>
     where
         Assert<{ N <= 128 }>: IsTrue,
         Array<N, bool>: BitPack<Packed = BitVec<N>>,
     {
-        let val = 1_u8.cast::<Unsigned<N>>()
-            << ((N - 1).cast::<Unsigned<N>>() - self.0.val().cast::<Unsigned<N>>());
+        type U<const N: usize> = Unsigned<N>;
+
+        let offset = (N - 1).cast::<U<N>>() - self.index().val().cast::<U<N>>();
+        let val = 1_u8.cast::<U<N>>() << offset;
         val.repack()
+    }
+
+    pub fn index(&self) -> Idx<N> {
+        self.0.clone()
+    }
+
+    pub fn mux<T: SignalValue>(&self, inputs: &Array<N, T>) -> T
+    where
+        Assert<{ idx_constr(N) <= usize::BITS as usize }>: IsTrue,
+    {
+        inputs.idx(self.index())
     }
 }

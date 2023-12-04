@@ -2,16 +2,14 @@
 #![allow(clippy::let_and_return)]
 #![allow(clippy::type_complexity)]
 #![feature(generic_const_exprs)]
-#![feature(const_trait_impl)]
 #![feature(generic_arg_infer)]
 pub mod active;
-pub mod counter;
+pub mod round_robin;
 pub mod signal_ext;
 pub mod ss_display;
 pub mod system;
 
 use active::{Active, High};
-use counter::Counter;
 use ferrum_hdl::{
     array::Array,
     bitpack::BitPack,
@@ -21,6 +19,7 @@ use ferrum_hdl::{
     signal::{reg_en, Reset, Signal},
     unsigned::u,
 };
+use round_robin::RoundRobin;
 use signal_ext::rise_rate;
 use system::{Params, System};
 
@@ -58,8 +57,8 @@ where
     };
     let slow = fast.clone().and(cnt.eq(0));
 
-    let anodes = Counter::<_>::signal(clk, rst.clone(), slow.clone())
-        .map(|cnt| cnt.one_hot().cast());
+    let anodes = RoundRobin::<_>::signal(clk, rst.clone(), slow.clone())
+        .map(|cnt| cnt.selector().cast());
 
     (anodes, seg, dp)
 }
