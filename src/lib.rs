@@ -16,17 +16,18 @@ use ferrum_hdl::{
     bitvec::BitVec,
     cast::Cast,
     domain::Clock,
-    signal::{reg_en, Reset, Signal},
-    unsigned::u,
+    signal::{Reset, Signal},
+    unsigned::Unsigned,
 };
 use round_robin::RoundRobin;
-use signal_ext::rise_rate;
+use signal_ext::rise_period;
 use system::{Params, System};
+
+use crate::ss_display::SSDisplay;
 
 pub fn top_module(
     clk: Clock<System>,
     rst: Reset<System>,
-    btn: Signal<System, Array<8, bool>>,
 ) -> (
     Signal<System, Array<4, Active<High>>>,
     Signal<System, Array<7, Active<High>>>,
@@ -35,30 +36,16 @@ pub fn top_module(
 where
     [bool; 4]: BitPack<Packed = BitVec<4>>,
 {
-    let seg = Signal::lift(u::MAX.repack::<Array<_, bool>>().cast());
+    let digits: Array<4, Unsigned<4>> = [1_u8, 2, 3, 4].cast();
+
+    let period = rise_period::<System, { <System as Params>::PERIOD }>(clk, rst.clone());
+    let rr = RoundRobin::signal(clk, rst.clone(), period);
+
+    let seg = rr.clone().map(|rr| rr.selector().cast());
+    let anodes = rr
+        .clone()
+        .map(move |rr| SSDisplay::encode(rr.mux(&digits)).repack());
     let dp = Signal::lift(false.cast());
 
-    let fast = rise_rate::<System, { <System as Params>::RATE }>(clk, rst.clone());
-
-    let cnt = {
-        let rst = rst.clone();
-        let fast = fast.clone();
-
-        btn.and_then(move |btn| {
-            let speed = btn.value().repack();
-            reg_en(clk, rst, fast, 0_u8, move |cnt| {
-                if cnt >= speed {
-                    0_u8
-                } else {
-                    cnt + 1
-                }
-            })
-        })
-    };
-    let slow = fast.clone().and(cnt.eq(0));
-
-    let anodes = RoundRobin::<_>::signal(clk, rst.clone(), slow.clone())
-        .map(|cnt| cnt.selector().cast());
-
-    (anodes, seg, dp)
+    (seg, anodes, dp)
 }

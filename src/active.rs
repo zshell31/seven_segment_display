@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use derive_where::derive_where;
 use ferrum_hdl::{
+    bitpack::BitPack,
     cast::{Cast, CastFrom},
     signal::SignalValue,
 };
@@ -29,9 +30,9 @@ impl Polarity for Low {
 }
 
 #[derive_where(Debug, Clone, Copy)]
-#[derive(SignalValue)]
+#[derive(SignalValue, BitPack)]
 #[signal_value(bound = "P: Polarity + 'static")]
-// #[bitpack(bound = "P: Polarity")]
+#[bitpack(bound = "P: Polarity")]
 pub struct Active<P: Polarity> {
     bit: bool,
     _polarity: PhantomData<P>,
