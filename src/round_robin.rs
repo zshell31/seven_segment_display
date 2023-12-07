@@ -49,8 +49,8 @@ where
 
     pub fn signal<D: ClockDomain>(
         clk: Clock<D>,
-        rst: Reset<D>,
-        next: Enable<D>,
+        rst: &Reset<D>,
+        next: &Enable<D>,
     ) -> Signal<D, Self> {
         reg_en(clk, rst, next, Self::new(), |rr| rr.next())
     }

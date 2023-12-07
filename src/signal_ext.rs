@@ -18,7 +18,7 @@ macro_rules! rise_every_constr {
 #[inline]
 pub fn rise_every<D: ClockDomain, const PS: usize>(
     clk: Clock<D>,
-    rst: Reset<D>,
+    rst: &Reset<D>,
 ) -> Signal<D, bool>
 where
     ConstConstr<{ rise_every_constr!(PS) }>:,
@@ -38,7 +38,7 @@ macro_rules! rise_period_constr {
 #[inline]
 pub fn rise_period<D: ClockDomain, const PS: usize>(
     clk: Clock<D>,
-    rst: Reset<D>,
+    rst: &Reset<D>,
 ) -> Signal<D, bool>
 where
     ConstConstr<{ rise_period_constr!(D, PS) }>:,
@@ -55,7 +55,7 @@ macro_rules! rise_rate_constr {
 #[inline]
 pub fn rise_rate<D: ClockDomain, const RATE: usize>(
     clk: Clock<D>,
-    rst: Reset<D>,
+    rst: &Reset<D>,
 ) -> Signal<D, bool>
 where
     ConstConstr<{ rise_rate_constr!(D, RATE) }>:,
