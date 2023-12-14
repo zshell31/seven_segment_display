@@ -20,29 +20,86 @@ module top_module
     output wire dp
 );
 
-    reg [2:0] dff;
+    reg [3:0] dff;
     initial begin
-        dff = 3'd0;
+        dff = 4'd0;
     end
-    wire [2:0] __tmp_2;
+    wire [3:0] __tmp_3;
     always @(posedge clk or posedge rst) begin
         if (rst)
-            dff <= 3'd0;
+            dff <= 4'd0;
         else
-            dff <= __tmp_2;
+            dff <= __tmp_3;
     end
 
-    wire [1:0] mux;
+    wire [2:0] out;
     Idx$succ __Idx$succ (
         // Inputs
-        .self$(dff[1 +: 2]),
+        .self$(dff[1 +: 3]),
         // Outputs
-        .mux(mux)
+        .mux(out)
     );
 
-    assign __tmp_2 = {
-        mux,
-        dff[1 +: 2] == 2'd3
+    assign __tmp_3 = {
+        out,
+        dff[1 +: 3] == 3'd7
+    };
+
+    reg [3:0] data;
+    initial begin
+        data = 4'd0;
+    end
+    wire [3:0] out_2;
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            data <= 4'd0;
+        else if (dff[0])
+            data <= out_2;
+    end
+
+    assign out_2 = data + 4'd1;
+
+    wire [3:0] digits$0;
+    wire [3:0] digits$1;
+    wire [3:0] digits$2;
+    wire [3:0] digits$3;
+    shift_register __shift_register (
+        // Inputs
+        .clk(clk),
+        .rst(rst),
+        .next(dff[0]),
+        .init(4'd0),
+        .prev(data),
+        // Outputs
+        .sr$0(digits$0),
+        .sr$1(digits$1),
+        .sr$2(digits$2),
+        .sr$3(digits$3)
+    );
+
+    reg [1:0] dff_1;
+    initial begin
+        dff_1 = 2'd0;
+    end
+    wire [1:0] __tmp_10;
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            dff_1 <= 2'd0;
+        else
+            dff_1 <= __tmp_10;
+    end
+
+    wire out_3;
+    Idx$succ_1 __Idx$succ_1 (
+        // Inputs
+        .self$(dff_1[1]),
+        // Outputs
+        .mux(out_3)
+    );
+
+    assign __tmp_10 = {
+        out_3,
+        dff_1[1] == 1'd1
     };
 
     wire [1:0] rr;
@@ -50,9 +107,9 @@ module top_module
         // Inputs
         .clk(clk),
         .rst(rst),
-        .next(dff[0]),
+        .next(dff_1[0]),
         // Outputs
-        .rr(rr)
+        .dff_en(rr)
     );
 
     RoundRobin$selector __RoundRobin$selector (
@@ -65,21 +122,21 @@ module top_module
         .selector_out_3(seg$3)
     );
 
-    wire [3:0] mux_out;
+    wire [3:0] digit;
     RoundRobin$mux __RoundRobin$mux (
         // Inputs
         .self$(rr),
-        .inputs$0(4'd1),
-        .inputs$1(4'd2),
-        .inputs$2(4'd3),
-        .inputs$3(4'd4),
+        .inputs$0(digits$0),
+        .inputs$1(digits$1),
+        .inputs$2(digits$2),
+        .inputs$3(digits$3),
         // Outputs
-        .mux_out(mux_out)
+        .mux(digit)
     );
 
     SSDisplay$encode __SSDisplay$encode (
         // Inputs
-        .n(mux_out),
+        .n(digit),
         // Outputs
         .a(anodes$0),
         .b(anodes$1),
@@ -97,17 +154,81 @@ endmodule
 module Idx$succ
 (
     // Inputs
-    input wire [1:0] self$,
+    input wire [2:0] self$,
     // Outputs
-    output wire [1:0] mux
+    output wire [2:0] mux
 );
 
     always @(*) begin
-        case (self$ == 2'd3)
+        case (self$ == 3'd7)
             1'h1:
-                mux = 2'd0;
+                mux = 3'd0;
             default:
-                mux = self$ + 2'd1;
+                mux = self$ + 3'd1;
+        endcase
+    end
+
+endmodule
+
+module shift_register
+(
+    // Inputs
+    input wire clk,
+    input wire rst,
+    input wire next,
+    input wire [3:0] init,
+    input wire [3:0] prev,
+    // Outputs
+    output reg [3:0] sr$0,
+    output reg [3:0] sr$1,
+    output reg [3:0] sr$2,
+    output reg [3:0] sr$3
+);
+
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            sr$0 <= init;
+        else if (next)
+            sr$0 <= prev;
+    end
+
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            sr$1 <= init;
+        else if (next)
+            sr$1 <= sr$0;
+    end
+
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            sr$2 <= init;
+        else if (next)
+            sr$2 <= sr$1;
+    end
+
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            sr$3 <= init;
+        else if (next)
+            sr$3 <= sr$2;
+    end
+
+endmodule
+
+module Idx$succ_1
+(
+    // Inputs
+    input wire self$,
+    // Outputs
+    output wire mux
+);
+
+    always @(*) begin
+        case (self$ == 1'd1)
+            1'h1:
+                mux = 1'd0;
+            default:
+                mux = self$ + 1'd1;
         endcase
     end
 
@@ -120,25 +241,25 @@ module RoundRobin$signal
     input wire rst,
     input wire next,
     // Outputs
-    output reg [1:0] rr
+    output reg [1:0] dff_en
 );
 
     initial begin
-        rr = 2'd0;
+        dff_en = 2'd0;
     end
-    wire [1:0] next_out;
+    wire [1:0] out;
     always @(posedge clk or posedge rst) begin
         if (rst)
-            rr <= 2'd0;
+            dff_en <= 2'd0;
         else if (next)
-            rr <= next_out;
+            dff_en <= out;
     end
 
     RoundRobin$next __RoundRobin$next (
         // Inputs
-        .self$(rr),
+        .self$(dff_en),
         // Outputs
-        .next_out(next_out)
+        .next_out(out)
     );
 
 endmodule
@@ -151,7 +272,7 @@ module RoundRobin$next
     output wire [1:0] next_out
 );
 
-    Idx$succ_1 __Idx$succ (
+    Idx$succ_2 __Idx$succ (
         // Inputs
         .self$(self$),
         // Outputs
@@ -160,7 +281,7 @@ module RoundRobin$next
 
 endmodule
 
-module Idx$succ_1
+module Idx$succ_2
 (
     // Inputs
     input wire [1:0] self$,
@@ -203,6 +324,37 @@ module RoundRobin$selector
     assign selector_out_2 = val[1];
 
     assign selector_out_3 = val[0];
+
+endmodule
+
+module RoundRobin$mux
+(
+    // Inputs
+    input wire [1:0] self$,
+    input wire [3:0] inputs$0,
+    input wire [3:0] inputs$1,
+    input wire [3:0] inputs$2,
+    input wire [3:0] inputs$3,
+    // Outputs
+    output wire [3:0] mux
+);
+
+    wire [15:0] __tmp;
+    assign __tmp = {
+        inputs$3,
+        inputs$2,
+        inputs$1,
+        inputs$0
+    };
+
+    always @(*) begin
+        case (self$)
+            2'b00 : mux = __tmp[0 +: 4];
+            2'b01 : mux = __tmp[4 +: 4];
+            2'b10 : mux = __tmp[8 +: 4];
+            default: mux = __tmp[12 +: 4];
+        endcase
+    end
 
 endmodule
 
@@ -259,37 +411,6 @@ module SSDisplay$encode
     assign f = __tmp_17[1];
 
     assign g = __tmp_17[0];
-
-endmodule
-
-module RoundRobin$mux
-(
-    // Inputs
-    input wire [1:0] self$,
-    input wire [3:0] inputs$0,
-    input wire [3:0] inputs$1,
-    input wire [3:0] inputs$2,
-    input wire [3:0] inputs$3,
-    // Outputs
-    output wire [3:0] mux_out
-);
-
-    wire [15:0] __tmp;
-    assign __tmp = {
-        inputs$3,
-        inputs$2,
-        inputs$1,
-        inputs$0
-    };
-
-    always @(*) begin
-        case (self$)
-            2'b00 : mux_out = __tmp[0 +: 4];
-            2'b01 : mux_out = __tmp[4 +: 4];
-            2'b10 : mux_out = __tmp[8 +: 4];
-            default: mux_out = __tmp[12 +: 4];
-        endcase
-    end
 
 endmodule
 

@@ -1,10 +1,8 @@
 use std::fmt::{self, Display};
 
 use ferrum_hdl::{
-    array::ArrayExt,
     bitpack::BitPack,
     cast::{Cast, CastFrom},
-    index::Idx,
     signal::SignalValue,
     unsigned::{u, Unsigned},
 };
