@@ -18,7 +18,11 @@ impl ClockDomain for ZynqMiniDom {
     const FREQ: usize = 50_000_000;
 }
 
+#[cfg(test)]
 pub(crate) type System = TestSystem;
+
+#[cfg(not(test))]
+pub(crate) type System = ZynqMiniDom;
 
 pub trait EnSignals<const N: usize>: ClockDomain + Sized {
     const RR_PERIOD: usize;

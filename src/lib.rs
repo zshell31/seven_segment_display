@@ -15,11 +15,13 @@ pub mod system;
 
 use active::{Active, High};
 use ferrum_hdl::{
-    array::Array,
+    array::{Array, ArrayExt},
     bitpack::BitPack,
     bitvec::BitVec,
     cast::Cast,
+    const_helpers::{Assert, ConstConstr, IsTrue},
     domain::Clock,
+    index::{idx_constr, Idx},
     signal::{reg_en, Reset, Signal},
     unsigned::Unsigned,
 };
@@ -30,6 +32,26 @@ use system::{EnSignals, System};
 use crate::ss_display::SSDisplay;
 
 const DIGITS: usize = 4;
+
+// fn priority_encoder<const N: usize>(data: Unsigned<N>) -> Unsigned<{ idx_constr(N) }>
+// where
+//     ConstConstr<{ idx_constr(N) }>:,
+//     Assert<{ N - 1 < N }>: IsTrue,
+// {
+//     let mut block = 0_u8.cast::<Unsigned<_>>();
+
+//     let blocks = Array::<N, _>::make(|idx| {
+//         let bit = data.idx(idx.rev());
+//         block = if bit { idx.cast() } else { block.clone() };
+//         block.clone()
+//     });
+//     let last = Idx::from::<{ N - 1 }>();
+//     blocks.idx(last)
+// }
+
+// pub fn top_module(data: Unsigned<8>) -> Unsigned<3> {
+//     priority_encoder(data)
+// }
 
 pub fn top_module(
     clk: Clock<System>,
